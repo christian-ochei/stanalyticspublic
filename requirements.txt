@@ -1,0 +1,7 @@
+requests
+future
+pandas
+plotly
+streamlit
+pyyaml
+bcrypt
