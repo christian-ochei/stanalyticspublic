@@ -761,7 +761,7 @@ def render_project_card(project, idx):
         with meta_cols[3]:
             st.caption(f"⬇️ {project['total_downloads']}")
         with meta_cols[4]:
-            if 'owner_profile_picture' in project:
+            if 'owner_profile_picture' in project and project['owner_profile_picture'] is not None:
                 st.image(make_full_and_protect(project['owner_profile_picture'].replace('..', '')), width=23)
         with meta_cols[5]:
             privacy_color = {
