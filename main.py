@@ -17,8 +17,8 @@ import bcrypt
 from functools import wraps
 import os
 
-STUNN_INTERNAL_URL = 'https://stunnvideo.com'
-STUNN_PUBLIC_URL = 'https://stunnvideo.com'
+STUNN_INTERNAL_URL = 'https://www.stunnvideo.com'
+STUNN_PUBLIC_URL = 'https://www.stunnvideo.com'
 
 class SecureAuthenticator:
     def __init__(self, config_path="config/auth_config.yaml"):
