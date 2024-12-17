@@ -8,7 +8,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import json
-# import STUNN_PRIVATE_META
 import streamlit as st
 import time
 from datetime import timedelta
@@ -18,8 +17,8 @@ import bcrypt
 from functools import wraps
 import os
 
-STUNN_INTERNAL_URL = 'https://stunn.ngrok.app'
-STUNN_PUBLIC_URL = 'https://stunn.ngrok.app'
+STUNN_INTERNAL_URL = 'https://stunnvideo.com'
+STUNN_PUBLIC_URL = 'https://stunnvideo.com'
 
 class SecureAuthenticator:
     def __init__(self, config_path="config/auth_config.yaml"):
