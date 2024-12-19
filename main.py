@@ -372,7 +372,7 @@ def plot_time_series(data, title):
         )
 
         # Use streamlit's native plotting
-        st.plotly_chart(fig, use_container_width=True, theme=None, key='title')
+        st.plotly_chart(fig, use_container_width=True, theme=None, key='plotly'+title)
 
     except Exception as e:
         st.error(f"Error plotting {title}: {str(e)}")
