@@ -953,7 +953,6 @@ def main():
                     ('users', 'Users'),
                     ('feedbacks', 'Feedbacks'),
                     ('site_requests', 'Site Requests'),
-                    ('processes', 'Processes'),
                     ('unsubscribes', 'Unsubscribes'),
                     ('billing_history', 'Billing History'),
                     ('projects', 'Projects')
