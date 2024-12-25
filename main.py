@@ -861,7 +861,7 @@ def main():
                     'total_visits': data['total_visits'],
                     'total_feedbacks': data['total_feedbacks'],
                     'total_projects': data['total_projects'],
-                    'total_storage': f"{data['total_storage']}GB",
+                    'total_storage': f"{data['total_storage']:.2f}GB",
                     'total_unsubscribes': data['total_unsubscribes']
                 }
                 create_metric_cards(overall_metrics)
@@ -874,7 +874,6 @@ def main():
                 ]
                 meta_metrics = {
                     'total_active_visitors': data['total_active_visitors'],
-                    'total_storage': data['total_storage'],
                 }
                 for key in HISTORY_TYPES:
                     meta_metrics[f'total_{key}'] = data[f'total_{key}']
