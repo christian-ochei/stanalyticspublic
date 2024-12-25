@@ -289,8 +289,8 @@ def plot_time_series_alt(data, title):
 
 def plot_table_data(data, title, key_prefix):
     if data:
-        for key in ['users', 'feedbacks', 'users_usage']:
-            for user in data[key]:
+        for user in data:
+            if 'profile_picture' in user:
                 user['profile_picture'] = make_full_and_protect(user['profile_picture'])
                 
         df = pd.DataFrame(data)
