@@ -289,6 +289,10 @@ def plot_time_series_alt(data, title):
 
 def plot_table_data(data, title, key_prefix):
     if data:
+        for key in ['users', 'feedbacks', 'users_usage']
+            for user in data[key]:
+                user['profile_picture'] = make_full_and_protect(user['profile_picture'])
+                
         df = pd.DataFrame(data)
 
         # Select columns to display
@@ -302,7 +306,7 @@ def plot_table_data(data, title, key_prefix):
         # Handle profile pictures for users and feedback sections
         if title.lower() in ['users', 'feedbacks', 'users usage'] and 'profile_picture' in df.columns:
             # Just pass the URL directly - no need for st.image()
-            df['Profile'] = (STUNN_PUBLIC_URL + df['profile_picture']) if df['profile_picture'].startwith('/') else df['profile_picture']
+            df['Profile'] = df['profile_picture']
 
             # Reorder columns to show profile picture first
             cols_to_display.remove('profile_picture')
