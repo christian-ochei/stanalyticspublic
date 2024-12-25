@@ -1,30 +1,28 @@
+import json
 import re
+from datetime import timedelta
 
 import requests
-import os
-import sqlite3
 from future.backports.datetime import datetime
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import json
 import streamlit as st
 import time
-from datetime import timedelta
 import yaml
 from pathlib import Path
 import bcrypt
 from functools import wraps
 import os
 
-STUNN_INTERNAL_URL = 'https://www.stunnvideo.com'
-STUNN_PUBLIC_URL = 'https://www.stunnvideo.com'
+IS_WINDOWS = os.name == 'nt'
+STUNN_PUBLIC_URL = 'http://127.0.0.1:5000' if IS_WINDOWS else 'https://www.stunnvideo.com'
 
 class SecureAuthenticator:
     def __init__(self, config_path="config/auth_config.yaml"):
         """Initialize the authenticator with configuration."""
         self.config_path = Path(config_path)
-        self.max_attempts = 3
+        self.max_attempts = 5
         self.lockout_time = 300  # 5 minutes
         self.session_timeout = 3600  # 1 hour
         self._load_config()
@@ -193,125 +191,13 @@ st.set_page_config(
 )
 
 
-def dict_factory(cursor, row):
-    """Convert SQLite row to dictionary"""
-    d = {}
-    for idx, col in enumerate(cursor.description):
-        d[col[0]] = row[idx]
-    return d
-
 # Connect to SQLite database
-
-def backup_tables_to_json(backup_folder='BACKUP_JSON'):
-    connection = sqlite3.connect('instance/site.db')
-    connection.row_factory = dict_factory
-    cursor = connection.cursor()
-
-    database_dictionary = {}
-    try:
-        # Create backup folder if it doesn't exist
-        if not os.path.exists(backup_folder):
-            os.makedirs(backup_folder)
-
-        # Get all table names
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        tables = cursor.fetchall()
-        for table in tables:
-            table_name = table['name']
-            # Skip SQLite internal tables
-            if table_name.startswith('sqlite_'):
-                continue
-
-            # Select all data from the table
-            cursor.execute(f"SELECT * FROM {table_name}")
-            rows = cursor.fetchall()
-
-            # Convert to JSON and write to file
-            json_data = json.dumps(rows, default=str, indent=2)
-            with open(f"{backup_folder}/{table_name}.json", 'w') as json_file:
-                database_dictionary[table_name] = json.loads(json_data)
-                json_file.write(json_data)
-
-            print(f"Exported {table_name} to {backup_folder}/{table_name}.json")
-
-    except Exception as e:
-        print(f"An error occurred: {e}")
-
-    finally:
-        if connection:
-            connection.close()
-
-    database_dictionary['total_users'] = len(database_dictionary['users'])
-    database_dictionary['total_visitors'] = len(set(a["user_id"] for a in database_dictionary['site_requests']))
-    database_dictionary['total_visits'] = len(database_dictionary['site_requests'])
-    database_dictionary['daily_users'] = {}
-    for user in database_dictionary['users']:
-        if user['email_confirmed_on'] is not None:
-            date = datetime.strptime(user['email_confirmed_on'], '%Y-%m-%d %H:%M:%S.%f').strftime('%Y-%m-%d')
-            if date not in database_dictionary['daily_users']:
-                database_dictionary['daily_users'][date] = 0
-            database_dictionary['daily_users'][date] += 1
-
-    database_dictionary['daily_visitors'] = {}
-    for request in database_dictionary['site_requests']:
-        date = datetime.strptime(request['updated_at'], '%Y-%m-%d %H:%M:%S.%f').strftime('%Y-%m-%d')
-        if date not in database_dictionary['daily_visitors']:
-            database_dictionary['daily_visitors'][date] = 0
-        database_dictionary['daily_visitors'][date] += 1
-
-    for time_type in [['day', 1], ['week', 7], ['month', 30]]:
-        database_dictionary[f'total_users_this_{time_type[0]}'] = len([
-            user for user in database_dictionary['users']
-            if user['email_confirmed_on'] is not None
-               and datetime.utcnow() - datetime.strptime(user['email_confirmed_on'], '%Y-%m-%d %H:%M:%S.%f')
-               < timedelta(days=time_type[1])
-        ])
-
-        database_dictionary[f'total_visits_this_{time_type[0]}'] = len([
-            request for request in database_dictionary['site_requests']
-            if datetime.utcnow() - datetime.strptime(request['updated_at'], '%Y-%m-%d %H:%M:%S.%f')
-               < timedelta(days=time_type[1])
-        ])
-
-    database_dictionary['total_projects'] = len(database_dictionary['projects'])
-    database_dictionary['daily_projects'] = {}
-    for project in database_dictionary['projects']:
-        date = datetime.strptime(project['updated_at'], '%Y-%m-%d %H:%M:%S.%f').strftime('%Y-%m-%d')
-        if date not in database_dictionary['daily_projects']:
-            database_dictionary['daily_projects'][date] = 0
-        database_dictionary['daily_projects'][date] += 1
-
-    database_dictionary['total_feedbacks'] = len(database_dictionary['feedbacks'])
-    for feedback in database_dictionary['feedbacks']:
-        if 'user_id' in feedback:
-            this_user = [a for a in database_dictionary['users'] if a['id'] == feedback['user_id']][0]
-            feedback['name'] = this_user['name']
-            feedback['username'] = this_user['username']
-            feedback['profile_picture'] = this_user['profile_picture']
-        else:
-            feedback['name'] = None
-            feedback['username'] = None
-            feedback['profile_picture'] = '/svg/icons/profile.svg'
-
-    database_dictionary['total_unsubscribes'] = len(database_dictionary['unsubscribes'])
-    database_dictionary['total_unsubscribes_this_day'] = len([
-        unsubscribe for unsubscribe in database_dictionary['unsubscribes']
-        if datetime.utcnow() - datetime.strptime(unsubscribe['updated_at'], '%Y-%m-%d %H:%M:%S.%f')
-           < timedelta(days=1)
-    ])
-    # projects_ = database_dictionary['projects']
-    database_dictionary['projects'] = [
-        json.loads(a['process_data']) for a in database_dictionary['projects']
-           if a['process_data'] != '' and a['process_data'] is not None]
-    database_dictionary['projects'] = [json.loads(a) if isinstance(a, str) else a for a in database_dictionary['projects']]
-    return database_dictionary
-
 def fetch_analytics():
     return requests.get(
-        STUNN_INTERNAL_URL + '/backdoor-api/analytics',
+        STUNN_PUBLIC_URL + '/backdoor-api/analytics',
         headers={
             'Content-Type': 'application/json',
-            'Authorization': f'Bearer {os.environ['ANALYTICS_API_KEY']}',
+            'Authorization': f'Bearer {os.environ["ANALYTICS_API_KEY"]}',
         }
     ).json()
 
@@ -323,10 +209,10 @@ def fetch_logs():
         }
     else:
         return requests.get(
-            STUNN_INTERNAL_URL + '/backdoor-api/logs',
+            STUNN_PUBLIC_URL + '/backdoor-api/logs',
             headers={
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {os.environ['ANALYTICS_API_KEY']}',
+                'Authorization': f'Bearer {os.environ["ANALYTICS_API_KEY"]}',
             }
         ).json()
 
@@ -336,7 +222,7 @@ def create_metric_cards(metrics, columns=4):
     cols = st.columns(columns)
     for idx, (key, value) in enumerate(metrics.items()):
         with cols[idx % columns]:
-            st.metric(key.replace('_', ' ').title(), value)
+            st.metric(key.replace('_', ' ').title().replace(' Ai ', ' AI '), value)
 
 
 def plot_time_series(data, title):
@@ -406,11 +292,15 @@ def plot_table_data(data, title, key_prefix):
         df = pd.DataFrame(data)
 
         # Select columns to display
-        exclude_cols = ['_password']  # Removed profile_picture from exclude_cols
+        exclude_cols = ['_password', 'no_of_minutes_left', 'no_of_minutes_left_pivot', 'payAsYouGoSetup',
+                        'setupIntent',
+                        'stripeCustomerId',
+                        'stripeCheckoutSessionId',
+                        'stripeSubscriptionId', 'user_data']  # Removed profile_picture from exclude_cols
         cols_to_display = [col for col in df.columns if col not in exclude_cols]
 
         # Handle profile pictures for users and feedback sections
-        if title.lower() in ['users', 'feedbacks'] and 'profile_picture' in df.columns:
+        if title.lower() in ['users', 'feedbacks', 'users usage'] and 'profile_picture' in df.columns:
             # Just pass the URL directly - no need for st.image()
             df['Profile'] = STUNN_PUBLIC_URL + df['profile_picture']
 
@@ -424,12 +314,12 @@ def plot_table_data(data, title, key_prefix):
 
         if len(bool_cols) > 0:
             st.write("Exclude Filters:")
-            filter_cols = st.columns(min(len(bool_cols), 4))
+            filter_cols = st.columns(len(bool_cols[:7]))
             filters = {}
-            for idx, col in enumerate(bool_cols):
-                with filter_cols[idx % 4]:
+            for idx, col in enumerate(bool_cols[:7]):
+                with filter_cols[idx]:
                     filters[col] = st.multiselect(
-                        f"Exclude {col.replace('_', ' ').title()}",
+                        f"Exclude {col.replace('_', ' ').title().replace(' Ai ', ' AI ')}",
                         options=[0, 1],
                         default=[],
                         key=f"{key_prefix}_{col}"
@@ -441,20 +331,37 @@ def plot_table_data(data, title, key_prefix):
                     df = df[~df[col].isin(values)]
 
         # Configure columns with explicit pixel widths
+        USAGE_KEYS = ['chars_generated', 'exports', 'ai_art_generated']
         column_config = {
             "Profile": st.column_config.ImageColumn(
                 "Profile",
-                width=5,  # Set explicit pixel width
+                width=32,  # Set explicit pixel width
             ),
             "id": st.column_config.Column(
                 "ID",
-                width=5,  # Set explicit pixel width
+                width=27,  # Set explicit pixel width
             ),
             "_id": st.column_config.Column(
                 "ID",
                 width=5,  # Set explicit pixel width
-            )
+            ),
+            **{
+                f"daily_{key}": st.column_config.LineChartColumn(
+                    f"Daily {key.replace('_', ' ').title().replace(' Ai ', ' AI ')}",
+                    width=200,  # Set explicit pixel width
+                )
+                for key in USAGE_KEYS
+            }
         }
+
+        # convert daily_chars_generated in dict format ex: {"2024-12-20":414,"2024-12-21":1305} to LineChartColumn
+        for key in USAGE_KEYS:
+            if f'daily_{key}' in df.columns:
+                df[f'daily_{key}'] = df[f'daily_{key}'].apply(
+                    lambda x: [chars for date, chars in x.items()]
+                )
+
+
 
         # Display table with pagination
         page_size = 5
@@ -533,7 +440,6 @@ def format_log_text(text):
 
 
 import html
-from datetime import datetime
 
 
 def create_logs_component(logs_data):
@@ -728,7 +634,26 @@ def render_project_card(project, idx):
     <style>
     [data-testid="stExpander"] details {
         border-style: none;
-        }
+    }
+    .chat-box {
+        background-color: #08080f;
+        padding: 2px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        padding-left: 14px;
+    }
+    .chat-message {
+        margin: 5px 0;
+        background-color: none;
+    }
+    .chat-user {
+        font-weight: bold;
+        color: #007bff;
+    }
+    .chat-ai {
+        font-weight: bold;
+        color: #28a745;
+    }
     </style>
         """, unsafe_allow_html=True)
 
@@ -743,7 +668,7 @@ def render_project_card(project, idx):
             if len(title) > 40:
                 title = title[:37] + '...'
             liked_emoji = '👍' if project.get('liked', False) else '👎' if project.get('disliked', False) else ''
-            st.markdown(f"#### {title} {liked_emoji}", unsafe_allow_html=True)
+            st.markdown(f"#### {title} {liked_emoji} \n\n <i>{project.get('prompt', 'No Prompt Specified')}</i>", unsafe_allow_html=True)
         with date1:
             st.caption(f"📅 {format_date(project['date_created'])}")
         with date2:
@@ -775,20 +700,39 @@ def render_project_card(project, idx):
         with meta_cols[7]:
             st.caption(f"🏆 {sum(project.get('usage_stats', {}).values())}")
         with meta_cols[8]:
-            st.caption(f"HAS TTVS")
+            st.caption(f"{project.get('storage_used_mb', 0.0):.2f}MB")
         with meta_cols[9]:
             # link to take us to STUNN_PUBLIC_URL + /p/{project['id']}
             st.markdown(f"[🔗]({STUNN_PUBLIC_URL}/p/{project['id']})")
 
         # Social media description with expansion
         text = project.get('text', "No description available.\n") + project.get('social_media_description', "")
-        if text:
-            with st.expander(text[:237] + '...' if len(text) > 240 else text, expanded=False):
-                st.write(text[237:])
+        with st.expander(text[:237] + '...' if len(text) > 240 else text, expanded=False):
+            st.write(text[237:])
+            chat_history = project.get('chat_history', [])[::-1]
+            # mini chat box
+            if chat_history:
+                st.markdown("##### Chat History")
+                for history in chat_history:
+                    source_class = "chat-user" if history['source'] == "user" else "chat-ai"
+                    st.markdown(
+                        f"""
+                        <div class="chat-box">
+                            <div class="chat-message">
+                                <span class="{source_class}">{history['source'].capitalize().replace('Ai', 'Stunn')}</span>
+                                {history['text']}
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
 
         # Usage statistics chart
         if project.get('usage_stats'):
             st.plotly_chart(create_usage_chart(project['usage_stats']), use_container_width=True, key=f'{idx}')
+
+        # Chat history p
 
 
 def view_projects_tab(user_data):
@@ -828,7 +772,6 @@ def view_projects_tab(user_data):
     filtered_projects = []
     for project in projects:
         assert isinstance(project, dict)
-        print(project,'projectproject')
         search_q = (project.get('text', '').lower() +
                     project.get('social_media_description', '').lower() +
                     (project.get('owner_name', '') or ' ').lower() +
@@ -918,9 +861,25 @@ def main():
                     'total_visits': data['total_visits'],
                     'total_feedbacks': data['total_feedbacks'],
                     'total_projects': data['total_projects'],
+                    'total_storage': f"{data['total_storage']}GB",
                     'total_unsubscribes': data['total_unsubscribes']
                 }
                 create_metric_cards(overall_metrics)
+
+                st.subheader("Usage Metrics")
+                HISTORY_TYPES = [
+                    'ai_art_generated',
+                    'chars_generated',
+                    'exports'
+                ]
+                meta_metrics = {
+                    'total_active_visitors': data['total_active_visitors'],
+                    'total_storage': data['total_storage'],
+                }
+                for key in HISTORY_TYPES:
+                    meta_metrics[f'total_{key}'] = data[f'total_{key}']
+
+                create_metric_cards(meta_metrics)
                 st.subheader("Current Period Metrics")
                 period_metrics = {
                     'total_users_this_day': data['total_users_this_day'],
@@ -933,35 +892,44 @@ def main():
                 }
                 create_metric_cards(period_metrics)
 
+                st.subheader("Current Period Usage Metrics")
+                meta_metrics = {}
+                for key in HISTORY_TYPES:
+                    meta_metrics[f'{key}_today'] = data[f'{key}_today']
+                create_metric_cards(period_metrics)
+
             with time_series_tab:
                 col1, col2 = st.columns(2)
-                with col1:
-                    st.subheader("Daily Users")
-                    plot_time_series(data['daily_users'], "Daily Users Trend")
 
-                with col2:
-                    st.subheader("Daily Visitors")
-                    plot_time_series(data['daily_visitors'], "Daily Visitors Trend")
-
-                if data['daily_projects']:
-                    st.subheader("Daily Projects")
-                    plot_time_series(data['daily_projects'], "Daily Projects Trend")
+                PLOTS = [
+                    'daily_users', 'daily_visitors', 'daily_projects',
+                    'daily_ai_art_generated', 'daily_chars_generated', 'daily_exports'
+                ]
+                for key in PLOTS:
+                    with col1:
+                        title = key.replace('_', ' ').title().replace(' Ai ', ' AI ')
+                        st.subheader(title)
+                        plot_time_series(data[key], f"{title} Trend")
 
             with tables_tab:
                 # Main data tables
                 for section, title in [
                     ('users', 'Users'),
+                    ('users_usage', 'Users Usage'),
                     ('feedbacks', 'Feedbacks'),
                     ('site_requests', 'Site Requests'),
                     ('unsubscribes', 'Unsubscribes'),
-                    ('billing_history', 'Billing History'),
                     ('projects', 'Projects')
                 ]:
-                    with st.expander(f"{title} Data", expanded=section in ['users', 'feedbacks']):
+                    with st.expander(f"{title} Data", expanded=section in ['users', 'feedbacks', 'users_usage']):
                         plot_table_data(data[section], title, section)
 
                         # Special visualizations for site requests
                         if section == 'site_requests' and data[section]:
+                            for a in data[section]:
+                                if 'user_agent' in a['lang']:
+                                    a['lang'] = json.loads(a['lang'])['lang']
+
                             df = pd.DataFrame(data[section])
                             col1, col2 = st.columns(2)
 
