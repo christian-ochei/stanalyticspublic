@@ -368,7 +368,7 @@ def plot_table_data(data, title, key_prefix):
 
 
         # Display table with pagination
-        page_size = 5
+        page_size = 100
         total_pages = len(df) // page_size + (1 if len(df) % page_size != 0 else 0)
         if total_pages > 0:
             page = st.number_input(f'Page ({total_pages} total)', min_value=1, max_value=total_pages, value=1,
