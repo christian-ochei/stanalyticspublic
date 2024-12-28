@@ -318,9 +318,9 @@ def plot_table_data(data, title, key_prefix):
 
         if len(bool_cols) > 0:
             st.write("Exclude Filters:")
-            filter_cols = st.columns(len(bool_cols[:7]))
+            filter_cols = st.columns(len(bool_cols))
             filters = {}
-            for idx, col in enumerate(bool_cols[:7]):
+            for idx, col in enumerate(bool_cols):
                 with filter_cols[idx]:
                     filters[col] = st.multiselect(
                         f"Exclude {col.replace('_', ' ').title().replace(' Ai ', ' AI ')}",
