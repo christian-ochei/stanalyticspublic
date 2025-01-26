@@ -720,14 +720,13 @@ def render_project_card(project, idx):
                 for history in chat_history:
                     source_class = "chat-user" if history['source'] == "user" else "chat-ai"
                     st.markdown(
-                        f"""
+                        """
                         <div class="chat-box">
                             <div class="chat-message">
                                 <span class="{source_class}">{history['source'].capitalize().replace('Ai', 'Stunn')}</span>
                                 {history['text']}
                             </div>
-                        </div>
-                        """,
+                        </div>""",
                         unsafe_allow_html=True
                     )
 
@@ -944,6 +943,28 @@ def main():
                             with col2:
                                 lang_counts = df['lang'].value_counts()
                                 fig = px.bar(x=lang_counts.index, y=lang_counts.values, title='Language Distribution')
+                                st.plotly_chart(fig, use_container_width=True)
+
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                url_counts = [a for a in data['referrer_distribution'].items()]
+                                fig = px.pie(values=[a[1] for a in url_counts], names=[a[0] for a in url_counts], title='Referrer Distribution')
+                                st.plotly_chart(fig, use_container_width=True)
+
+                            with col2:
+                                url_counts = [a for a in data['referrer_distribution_this_month'].items()]
+                                fig = px.pie(values=[a[1] for a in url_counts], names=[a[0] for a in url_counts], title='Referrer Distribution This Month')
+                                st.plotly_chart(fig, use_container_width=True)
+
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                url_counts = [a for a in data['ref_distribution'].items()]
+                                fig = px.pie(values=[a[1] for a in url_counts], names=[a[0] for a in url_counts], title='Ref Distribution')
+                                st.plotly_chart(fig, use_container_width=True)
+
+                            with col2:
+                                url_counts = [a for a in data['ref_distribution_this_month'].items()]
+                                fig = px.pie(values=[a[1] for a in url_counts], names=[a[0] for a in url_counts], title='Ref Distribution This Month')
                                 st.plotly_chart(fig, use_container_width=True)
 
             with host_logs_tab:
