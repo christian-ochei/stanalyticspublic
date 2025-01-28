@@ -720,7 +720,7 @@ def render_project_card(project, idx):
                 for history in chat_history:
                     source_class = "chat-user" if history['source'] == "user" else "chat-ai"
                     st.markdown(
-                        """
+                       f"""
                         <div class="chat-box">
                             <div class="chat-message">
                                 <span class="{source_class}">{history['source'].capitalize().replace('Ai', 'Stunn')}</span>
