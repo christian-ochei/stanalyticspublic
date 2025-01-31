@@ -681,7 +681,7 @@ def render_project_card(project, idx):
         # Metadata row
         meta_cols = st.columns([0.6, 0.9, 0.4, 0.5, 0.4, 1, 0.6, 0.4, 0.8, 0.2])
         with meta_cols[0]:
-            st.caption(f"⏱️ {project['duration']:.2f}h")
+            st.caption(f"⏱️ {project['duration']:.2f}s")
         with meta_cols[1]:
             hours_spent = len(project.get('usage_stats', {}))
             st.caption(f"📈 < {hours_spent:.2f}h")
