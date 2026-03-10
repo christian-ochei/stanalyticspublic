@@ -5,3 +5,4 @@ plotly
 pyyaml
 bcrypt
 streamlit
+altair<5
