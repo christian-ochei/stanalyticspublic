@@ -5,4 +5,5 @@ plotly
 pyyaml
 bcrypt
 streamlit
-altair<5
+streamlit>=1.35.0
+altair>=5.0.0
