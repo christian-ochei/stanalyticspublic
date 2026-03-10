@@ -628,6 +628,7 @@ def make_full_and_protect(url):
     if url.startswith('/'):
         url = STUNN_PUBLIC_URL + url
     else:
+        print(url, "U")
         assert url.startswith('https://')
     return url.strip()
 
