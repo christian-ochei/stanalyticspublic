@@ -627,9 +627,6 @@ def make_full_and_protect(url):
     url = re.sub(r'\n', '', url)
     if url.startswith('/'):
         url = STUNN_PUBLIC_URL + url
-    else:
-        print(url, "U")
-        assert url.startswith('https://')
     return url.strip()
 
 
@@ -666,8 +663,9 @@ def render_project_card(project, idx):
         # col1 = st.columns([20])
         # with col1:
         col_thumb, title_col, date1, date2 = st.columns([1, 7, 2, 2])
-        with col_thumb:
-            st.image(make_full_and_protect(project['thumbnail'].replace('..', '')), width=60, use_container_width=False)
+        if project['thumbnail'] and not project['thumbnail'].startswith("%"):
+            with col_thumb:
+                st.image(make_full_and_protect(project['thumbnail'].replace('..', '')), width=60, use_container_width=False)
         with title_col:
             title = project.get('title', 'Untitled Project')
             if len(title) > 40:
